@@ -18,8 +18,10 @@ import {
   orderBy,
 } from "firebase/firestore";
 import db  from "./firebase";
+import { useStateValue } from "./StateProvider";
 
 function Chat() {
+  const [{user},dispatch] = useStateValue()
   const messageInputRef = useRef();
   const { roomId } = useParams();
   const [room, setRoom] = useState([]);
@@ -57,7 +59,7 @@ function Chat() {
 
     const messageRef = collection(db, "rooms", roomId, "message");
     addDoc(messageRef, {
-      name: "Abhinav Tripathi",
+      name: user.displayName,
       message: enteredMessage,
       timestamp: serverTimestamp(),
     })
@@ -70,7 +72,9 @@ function Chat() {
         <Avatar src={`https://avatars.dicebear.com/api/human/125.svg`}/>
         <div className="chat__headerInfo">
           <h3>{room}</h3>
-          <p>Last Seen..</p>
+          <p>{
+            new Date(messages[messages.length-1]?.timestamp?.seconds*1000).toLocaleTimeString()
+            }</p>
         </div>
         <div className="header__right">
           <IconButton>
@@ -89,7 +93,7 @@ function Chat() {
           <p
             key={index}
             className={`chat__message ${
-              !message.receiver ? "chat__receiver" : ""
+              user.displayName===message.name ? "chat__receiver" : ""
             }`}
           >
             <span className="chat__name">{message.name}</span>

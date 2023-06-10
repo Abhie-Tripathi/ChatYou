@@ -8,8 +8,11 @@ import "./css/sidebar.css";
 import SidebarChat from './SidebarChat';
 import db from './firebase';
 import { collection, onSnapshot } from 'firebase/firestore';
+import { useStateValue } from './StateProvider';
+import { auth } from './firebase';
 
 const Sidebar = () => {
+  const [{user},dispatch] = useStateValue()
   const [rooms, setRooms] = useState([]);
   const roomsCollectionRef = collection(db, "rooms");
 
@@ -27,7 +30,7 @@ const Sidebar = () => {
   return (
     <div className='sidebar'>
       <div className='sidebar__header'>
-        <Avatar />
+        <Avatar src={user.photoURL} onClick={()=>auth.signOut()}/>
         <div className='sidebar__headerRight'>
           <IconButton>
             <DonutLargeIcon/>

@@ -3,12 +3,13 @@ import { Avatar } from "@material-ui/core";
 import "./css/sidebar.css";
 import { useEffect } from "react";
 import db from "./firebase";
-import { collection,addDoc } from "firebase/firestore";
+import { collection,addDoc,query,orderBy,onSnapshot } from "firebase/firestore";
 import { Link } from "react-router-dom";
 
 function SidebarChat({id, name, addnewchat}) {
 
   const [seed, setseed] = useState("");
+  const [lastmessage,setlastmessage] = useState("")
   const roomsCollectionRef = collection(db,"rooms")
 
   const createChat = () =>{
@@ -20,7 +21,22 @@ function SidebarChat({id, name, addnewchat}) {
   
   useEffect(()=>{
     setseed(Math.floor(Math.random() * 5000))
+   if(id){
+    const messageQuery = query(
+      collection(db, "rooms", id, "message"),
+      orderBy("timestamp","desc")
+    )
+
+    onSnapshot(messageQuery, (snapshot) => {
+      const messageList = snapshot.docs.map((doc) => doc.data());
+      setlastmessage(messageList);
+    });
+
+  }
+
   },[])
+
+  
 
 
   return !addnewchat ? (
@@ -29,7 +45,7 @@ function SidebarChat({id, name, addnewchat}) {
       <Avatar src={`https://avatars.dicebear.com/api/human/${seed}.svg`} />
       <div className="sidebar__ChatInfo">
         <h2>{name}</h2>
-        <p>Last Message...</p>
+        <p>{lastmessage[0]?.message}</p>
       </div>
     </div>
     </Link>
