@@ -1,4 +1,4 @@
-import React,{useState,useEffect,useRef} from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Avatar, IconButton } from "@material-ui/core";
 import SearchIcon from "@material-ui/icons/Search";
 import AttachFileIcon from "@material-ui/icons/AttachFile";
@@ -7,35 +7,67 @@ import "./css/chat.css";
 import EmojiEmotionsIcon from "@material-ui/icons/EmojiEmotions";
 import MicIcon from "@material-ui/icons/Mic";
 import { useParams } from "react-router-dom";
-import { doc,getDoc,serverTimestamp,setDoc } from "firebase/firestore";
-import db from "./firebase";
+import {
+  addDoc,
+  doc,
+  onSnapshot,
+  collection,
+  serverTimestamp,
+  setDoc,
+  query,
+  orderBy,
+} from "firebase/firestore";
+import db  from "./firebase";
 
 function Chat() {
-  const messageInputRef = useRef()
+  const messageInputRef = useRef();
   const { roomId } = useParams();
-  const [room,setroom] = useState("")
-  
-  useEffect(()=>{
-    if(roomId){
-    const docRef = doc(db, "rooms", roomId);
-    getDoc(docRef).then((data)=>setroom(data.data().name))
+  const [room, setRoom] = useState([]);
+  const [messages, setMessages] = useState([]);
+
+  useEffect(() => {
+    if (roomId) {
+      const roomRef = doc(db, "rooms", roomId);
+      onSnapshot(roomRef, (snapshot) => {
+        setRoom(snapshot.data().name);
+      });
     }
-  },[roomId])
+    if(roomId){
+    const messageQuery = query(
+      collection(db, "rooms", roomId, "message"),
+      orderBy("timestamp")
+    )
 
+    const unsubscribe = onSnapshot(messageQuery, (snapshot) => {
+      const messageList = snapshot.docs.map((doc) => doc.data());
+      setMessages(messageList);
+    });
 
-  const submitHandler = (e) =>{
-    e.preventDefault()
-    const enteredMessage = messageInputRef.current.value
-    const docRef = doc(db, "rooms", roomId, "message","message");
-    setDoc(docRef,{message: enteredMessage, timestamp:serverTimestamp()})
-    messageInputRef.current.value = ""
-  }
+    return () => {
+      unsubscribe(); // Unsubscribe from the message snapshot listener when component unmounts
+    }}
+  }, [roomId]);
 
+  const submitHandler = (e) => {
+    e.preventDefault();
+    const enteredMessage = messageInputRef.current.value;
+    if(enteredMessage===""){
+      return(alert("Please Enter Your Message"))
+    }
+
+    const messageRef = collection(db, "rooms", roomId, "message");
+    addDoc(messageRef, {
+      name: "Abhinav Tripathi",
+      message: enteredMessage,
+      timestamp: serverTimestamp(),
+    })
+    messageInputRef.current.value = "";
+  };
 
   return (
     <div className="chat">
       <div className="chat__header">
-        <Avatar />
+        <Avatar src={`https://avatars.dicebear.com/api/human/125.svg`}/>
         <div className="chat__headerInfo">
           <h3>{room}</h3>
           <p>Last Seen..</p>
@@ -53,29 +85,28 @@ function Chat() {
         </div>
       </div>
       <div className="chat__body">
-        <p className="chat__message chat__receiver">
-          <span className="chat__name">Abhinav</span>
-          This is test message
-          <span className="chat__time">12:40 PM</span>
-        </p>
-        <p className="chat__message chat__receiver">
-          <span className="chat__name">Abhinav</span>
-          This is test message
-          <span className="chat__time">12:40 PM</span>
-        </p>
-        <p className="chat__message">
-          <span className="chat__name">Abhinav</span>
-          This is test message
-          <span className="chat__time">12:40 PM</span>
-        </p>
+        {messages.map((message, index) => (
+          <p
+            key={index}
+            className={`chat__message ${
+              !message.receiver ? "chat__receiver" : ""
+            }`}
+          >
+            <span className="chat__name">{message.name}</span>
+            {message.message}
+            <span className="chat__time">{
+            new Date(message.timestamp?.seconds*1000).toLocaleTimeString()
+            }</span>
+          </p>
+        ))}
       </div>
 
       <div className="chat__footer">
         <EmojiEmotionsIcon />
         <AttachFileIcon />
         <form onSubmit={submitHandler}>
-          <input type="text" placeholder="Type your message" ref={messageInputRef}/>
-          <input type="submit"/>
+          <input type="text" placeholder="Type your message" ref={messageInputRef} />
+          <input type="submit" />
         </form>
         <MicIcon />
       </div>
